@@ -154,8 +154,7 @@ def run_sql_query(query):
 def return_joins_results(*args):
     joins_string = ""
     for i in range(0, len(args), 4):
-        joins_string += f"{args[i]} JOIN {args[i+1]
-                                          } on {args[i+3]} = {args[i+2]} \n"
+        joins_string += f"{args[i]} JOIN {args[i+1]} on {args[i+3]} = {args[i+2]} \n"
     return joins_string
 
 def return_customs_results(*args):
@@ -166,8 +165,7 @@ def return_filters_results(*args):
     filters_string = ""
     filters_string += f"({args[0]} ({args[1]} {args[2]} {args[3]})) "
     for i in range(4, len(args), 5):
-        filters_string += f"{args[i]} ({args[i+1]
-                                        } ({args[i+2]} {args[i+3]} {args[i+4]})) "
+        filters_string += f"{args[i]} ({args[i+1]} ({args[i+2]} {args[i+3]} {args[i+4]})) "
     return filters_string
 
 

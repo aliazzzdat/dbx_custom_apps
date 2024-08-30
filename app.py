@@ -288,6 +288,7 @@ with gr.Blocks() as demo:
                 join_type = gr.Dropdown(
                     choices=["INNER", "LEFT", "RIGHT", "OUTER"], label="join Type")
 
+                check_connection.change(fn=get_catalogs_names, outputs=catalogs_join_list)
                 catalogs_join_list.change(
                     fn=get_schemas_names, inputs=catalogs_join_list, outputs=schemas_join_list)
                 schemas_join_list.change(

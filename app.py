@@ -1,4 +1,6 @@
 import gradio as gr
+from databricks import sql
+
 
 # TODO
 # retrive dynamically all columns names from created colummns for filter + agg
@@ -10,24 +12,63 @@ import gradio as gr
 # --column to select and sorting
 # --clear button
 # add union, except
+# --add try except at each query
+# put cursor as variable instead of global
 
 TEST = True
+CURSOR = None
+
+
+def set_connection(db_host, db_token, db_warehouse_id):
+    if TEST: 
+        CURSOR = True
+        return True
+    elif all(v is not None for v in [db_host, db_token, db_warehouse_id]):
+        try:
+            connection = sql.connect(
+                server_hostname=db_host,
+                http_path=f"/sql/1.0/warehouses/{db_warehouse_id}",
+                access_token=db_token
+            )
+            CURSOR = connection.cursor()
+            return True
+        except Exception as e:
+            print(e)
+            CURSOR = None
+            return False
 
 
 def get_catalogs_names():
     if TEST:
         catalogs = ['catalog1', 'catalog2']
     else:
-        catalogs = spark.sql("SHOW CATALOGS;").select('catalog').collect()
-    return catalogs
+        if CURSOR is not None:
+            try:
+                CURSOR.execute("SHOW CATALOGS;")
+                df = CURSOR.fetchall_arrow().to_pandas()
+                catalogs = df['catalog'].tolist()
+            except Exception as e:
+                print(e)
+                catalogs = ['error']
+        else:
+            catalogs = ['error']
+    return gr.update(choices=catalogs, value=None)
 
 
 def get_schemas_names(catalog):
     if TEST:
         schemas = ['schemas1', 'schemas2', 'schemas3']
     else:
-        schemas = spark.sql(f"SHOW SCHEMAS IN {catalog};").select(
-            'databaseName').collect()
+        if CURSOR is not None:
+            try:
+                CURSOR.execute(f"SHOW SCHEMAS IN {catalog};")
+                df = CURSOR.fetchall_arrow().to_pandas()
+                schemas = df['databaseName'].tolist()
+            except Exception as e:
+                print(e)
+                schemas = ['error']
+        else:
+            schemas = ['error']
     schemas = list(map(lambda x: f"{catalog}.{x}", schemas))
     return gr.update(choices=schemas, value=None)
 
@@ -36,8 +77,16 @@ def get_tables_names(schema):
     if TEST:
         tables = ['tablesA', 'tablesB', 'tablesC']
     else:
-        tables = spark.sql(f"SHOW TABLES IN {catalog}.{
-                           schema};").select('tableName').collect()
+        if CURSOR is not None:
+            try:
+                CURSOR.execute(f"SHOW TABLES IN {schema};")
+                df = CURSOR.fetchall_arrow().to_pandas()
+                tables = df['tableName'].tolist()
+            except Exception as e:
+                print(e)
+                tables = ['error']
+        else:
+            tables = ['error']
     tables = list(map(lambda x: f"{schema}.{x}", tables))
     return gr.update(choices=tables, value=None)
 
@@ -46,8 +95,16 @@ def get_columns_names(table):
     if TEST:
         columns = ['columns0', 'columns1', 'columns2']
     else:
-        columns = spark.sql(f"DESCRIBE {catalog}.{schema}.{
-                            table};").select('col_name').collect()
+        if CURSOR is not None:
+            try:
+                CURSOR.execute(f"DESCRIBE {table};")
+                df = CURSOR.fetchall_arrow().to_pandas()
+                columns = df['col_name'].tolist()
+            except Exception as e:
+                print(e)
+                columns = ['error']
+        else:
+            columns = ['error']
     columns = list(map(lambda x: f"{table}.{x}", columns))
     return gr.update(choices=columns, value=None)
 
@@ -125,21 +182,35 @@ def get_all_columns(main_table, joins_output):
     all_columns = []
     if main_table:
         all_columns.extend(get_columns_names(main_table)['choices'])
-    
+
     if joins_output:
         joined_tables = [j.split()[2] for j in joins_output.split('\n') if j]
         for table in joined_tables:
             all_columns.extend(get_columns_names(table)['choices'])
-    
+
     return list(set(all_columns))  # Remove duplicates
 
 
 with gr.Blocks() as demo:
 
     with gr.Row():
+        databricks_token = gr.Textbox(
+            label="DATABRICKS_TOKEN", type="password")
+        databricks_host = gr.Textbox(label="DATABRICKS_HOST")
+        databricks_warehouse_id = gr.Textbox(label="DATABRICKS_WAREHOUSE_ID")
+        check_connection = gr.Checkbox(label="Connected", interactive=False, value=False)
+        #check_connection = gr.Textbox(label="Connected", interactive=False)
+        connect = gr.Button("Connect")
+
+        connect.click(set_connection, [
+                      databricks_host, databricks_token, databricks_warehouse_id], check_connection)
+
+    with gr.Row():
 
         catalogs_list = gr.Dropdown(
-            choices=get_catalogs_names(), label="Catalogs list", interactive=True)
+            choices=[], label="Catalogs list", interactive=True)
+        check_connection.change(fn=get_catalogs_names, outputs=catalogs_list)
+
         schemas_list = gr.Dropdown(
             choices=[], label="Schemas list", interactive=True)
         tables_list = gr.Dropdown(
@@ -344,7 +415,7 @@ with gr.Blocks() as demo:
                 with gr.Row():
                     key_col = gr.Dropdown(
                         label="Keys aggregation", multiselect=True)
-                    
+
                     def update_aggregation_columns(main_table, joins):
                         all_columns = get_all_columns(main_table, joins)
                         return gr.update(choices=all_columns)
@@ -361,7 +432,7 @@ with gr.Blocks() as demo:
                 agg_col = gr.Dropdown(label="Agg aggregation")
                 func_col = gr.Dropdown(label="Func aggregation", choices=[
                                        "MEAN", "COUNT", "SUM", "MIN", "MAX", "FIRST", "LAST", "CONCAT_WS"])
-                
+
                 tables_list.change(update_aggregation_columns,
                                    inputs=[tables_list, joins_output], outputs=agg_col)
                 joins_output.change(update_aggregation_columns,

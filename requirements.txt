@@ -1,0 +1,2 @@
+gradio==4.42.0
+databricks-sql-connector==3.4.0

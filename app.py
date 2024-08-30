@@ -15,11 +15,12 @@ from databricks import sql
 # --add try except at each query
 # put cursor as variable instead of global
 
-TEST = True
+TEST = False
 CURSOR = None
 
 
 def set_connection(db_host, db_token, db_warehouse_id):
+    global CURSOR
     if TEST: 
         CURSOR = True
         return True
@@ -34,6 +35,7 @@ def set_connection(db_host, db_token, db_warehouse_id):
             return True
         except Exception as e:
             print(e)
+            print(db_host, db_token, db_warehouse_id)
             CURSOR = None
             return False
 
@@ -145,6 +147,9 @@ def create_table(main_df, joins, filters, aggregations, customs):
     query += build_sql_query(main_df, joins, filters, aggregations, customs)
     return query
 
+def run_sql_query(query):
+    CURSOR.execute(query)
+    return CURSOR.fetchall_arrow().to_pandas()
 
 def return_joins_results(*args):
     joins_string = ""
@@ -152,7 +157,6 @@ def return_joins_results(*args):
         joins_string += f"{args[i]} JOIN {args[i+1]
                                           } on {args[i+3]} = {args[i+2]} \n"
     return joins_string
-
 
 def return_customs_results(*args):
     return ", ".join(args)
@@ -232,7 +236,7 @@ with gr.Blocks() as demo:
 
         build_sql_btn = gr.Button("Build SQL Query")
         sql_output = gr.Textbox(label="Generated SQL Query")
-        create_sql_btn = gr.Button("Create Table")
+        run_sql_btn = gr.Button("View Query")
         clear_btn = gr.Button("Clear", variant="stop")
 
         def update_sorting_column(columns):
@@ -448,6 +452,8 @@ with gr.Blocks() as demo:
                 func_col.change(return_aggregations_metrics_results,
                                 inputs=aggregations_boxes, outputs=aggregations_metrics_output)
 
+    query_result = gr.Dataframe()
+
     build_sql_btn.click(
         build_sql_query,
         inputs=[tables_list, joins_output, filters_output, aggregations_keys_output,
@@ -455,16 +461,31 @@ with gr.Blocks() as demo:
         outputs=sql_output
     )
 
+    run_sql_btn.click(
+        run_sql_query,
+        inputs=sql_output,
+        outputs=query_result
+    )
+ 
+    arrays_list = [selected_columns]
     counters_list = [joins_count, customs_count,
                      filters_count, aggregations_count]
-    components_list = [catalogs_list, schemas_list, tables_list, selected_columns, sorting_column, sorting_order, sorting_output,
-                       sql_output, joins_output, customs_output, filters_output, aggregations_metrics_output, aggregations_keys_output]
+    components_list = [catalogs_list, schemas_list, tables_list, sorting_column, sorting_order, sorting_output,
+                       sql_output, joins_output, customs_output, filters_output, aggregations_metrics_output, aggregations_keys_output, query_result]
 
+    def reset_all_arrays():
+        return [gr.update(value=[]) for _ in range(len(arrays_list))]
+    
     def reset_all_counters():
         return [gr.update(value=0) for _ in range(len(counters_list))]
 
     def reset_all_components():
         return [gr.update(value=None) for _ in range(len(components_list))]
+
+    clear_btn.click(
+        reset_all_arrays,
+        outputs=arrays_list
+    )
 
     clear_btn.click(
         reset_all_counters,

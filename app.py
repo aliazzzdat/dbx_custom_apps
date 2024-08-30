@@ -139,6 +139,7 @@ def build_sql_query(main_df, joins, filters, aggregations_keys, aggregations_met
     if sorting:
         query += f"\nORDER BY {sorting}"
 
+    query += "\n LIMIT 1000"
     return query
 
 

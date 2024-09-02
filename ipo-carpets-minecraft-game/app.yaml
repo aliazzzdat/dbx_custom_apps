@@ -1,0 +1,8 @@
+command:
+  - python
+  - app.py
+env:
+  - name: MODEL_ENDPOINT_TOKEN
+    value: your_token
+  - name: MODEL_ENDPOINT_HOST
+    value: https://e2-demo-field-eng.cloud.databricks.com/serving-endpoints

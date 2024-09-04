@@ -2,6 +2,9 @@ import gradio as gr
 from openai import OpenAI
 import time
 import os
+from PIL import Image
+import io
+import base64
 
 # Set up the Databricks token and client
 MODEL_ENDPOINT_TOKEN = os.getenv('MODEL_ENDPOINT_TOKEN')
@@ -178,19 +181,43 @@ GOALS = {
     "PARENTS_PLAY_MINECRAFT": "Your goal is to convince your parents to let you play Minecraft in as few messages as possible."
 }
 
+CHARACTERS = {
+    "BRICKSDATA_IPO": ("\n Employee : ", "\n CEO : "),
+    "TURKISH_CARPET_SALESMAN": ("\n Buyer : ", "\n Turkish carpet salesman : "),
+    "PARENTS_PLAY_MINECRAFT": ("\n Child : ", "\n Parents : ")
+}
+
+GENERAL_IMAGE_PROMPT = " Write a prompt to generate a relevant image to describe the scene, a person or an object or to give context. Write only the prompt."
+BRICKSDATA_IPO_IMAGE = "Here is a discussion between a CEO of a successful data company named BRICKSDATA and one of their employees."
+TURKISH_CARPET_SALESMAN_IMAGE = "Here is a discussion between a Turkish carpet salesman and a buyer. The Turkish carpet salesman is selling a very high-quality carpet for 1000€ and the buyer is negotating the price."
+PARENTS_PLAY_MINECRAFT_IMAGE = "Here is a discussion between a child and his parents.The child wants to play Minecraft but hasn't finished their homework."
+
+BRICKSDATA_IPO_IMAGE = BRICKSDATA_IPO_IMAGE + GENERAL_IMAGE_PROMPT
+TURKISH_CARPET_SALESMAN_IMAGE = TURKISH_CARPET_SALESMAN_IMAGE + GENERAL_IMAGE_PROMPT
+PARENTS_PLAY_MINECRAFT_IMAGE = PARENTS_PLAY_MINECRAFT_IMAGE + GENERAL_IMAGE_PROMPT
+
+IMAGE_PROMPTS = {
+    "BRICKSDATA_IPO": BRICKSDATA_IPO_IMAGE,
+    "TURKISH_CARPET_SALESMAN": TURKISH_CARPET_SALESMAN_IMAGE,
+    "PARENTS_PLAY_MINECRAFT": PARENTS_PLAY_MINECRAFT_IMAGE,
+}
+
 
 class ChatBot:
     def __init__(self):
         self.history = []
+        self.history_script = []
         self.current_prompt = "BRICKSDATA_IPO"
         self.message_count = 0
         self.game_over = False
         self.game_over_message = ""
+        self.last_request = ""
 
     def respond(self, message):
+        print('respond')
         if self.game_over:
             self.reset()
-            return "The previous game is over. A new game has started. " + self.get_greeting()
+            return "The previous game is over. A new game has started. \n " + self.get_greeting()
 
         self.message_count += 1
 
@@ -202,6 +229,7 @@ class ChatBot:
             ]],
             {"role": "user", "content": message}
         ]
+        self.last_request = messages
 
         try:
             chat_completion = client.chat.completions.create(
@@ -211,6 +239,12 @@ class ChatBot:
             )
             response = chat_completion.choices[0].message.content
 
+            self.history.append((message, response))
+            user_replica = f"{CHARACTERS[self.current_prompt][0]}{message}"
+            bot_replica = f"{CHARACTERS[self.current_prompt][1]}{response}"
+            script = user_replica + bot_replica
+            self.history_script.append(script)
+
             if "you have won" in response.lower() or "you have lost" in response.lower():
                 self.game_over = True
                 self.game_over_message = response
@@ -218,6 +252,37 @@ class ChatBot:
             return response
         except Exception as e:
             return f"An error occurred: {str(e)}"
+        
+    def generate_image(self):
+
+        try:
+            print("generate image prompt")
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": IMAGE_PROMPTS[self.current_prompt]},
+                    {"role": "user", "content": "\n -- \n".join(self.history_script)},
+                ],
+                model="databricks-meta-llama-3-1-405b-instruct",
+                max_tokens=256,
+            )
+            print("print generate image")
+            prompt_image = chat_completion.choices[0].message.content
+            image = client.images.generate(
+                prompt=prompt_image,
+                model="databricks-shutterstock-imageai"
+            )
+            print("decode image")
+            encoded_image = image.data[0].b64_json
+            #decoded_image = base64.b64decode(encoded_image)
+            #image = Image.open(io.BytesIO(decoded_image))
+            #image
+            #TODO how to return image in chatbot and how to get chat history
+            #gr.Chatbot([('hi', f'The image is: <img src="data:image/png;base64,{image_base64}">')])
+            return (None, f'<img src="data:image/png;base64,{encoded_image}">')
+        except Exception as e:
+            return (None, f"An error occurred: {str(e)}")
+        
+
 
     def change_prompt(self, new_prompt):
         self.current_prompt = new_prompt
@@ -241,9 +306,12 @@ class ChatBot:
 
     def reset(self):
         self.history.clear()
+        self.history_script.clear()
         self.message_count = 0
         self.game_over = False
         self.game_over_message = ""
+        self.last_request = ""
+        #self.current_prompt = "BRICKSDATA_IPO"
 
 
 chatbot = ChatBot()
@@ -252,6 +320,9 @@ chatbot = ChatBot()
 def chat(message, chat_history):
     bot_message = chatbot.respond(message)
     chat_history.append((message, bot_message))
+    if not chatbot.game_over:
+        image_msg = chatbot.generate_image()
+        chat_history.append(image_msg)
     # time.sleep(2)  # Adding a delay to simulate processing time
     return "", chat_history, chatbot.get_message_count()
 

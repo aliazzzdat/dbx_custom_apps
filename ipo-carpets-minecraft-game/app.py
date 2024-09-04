@@ -366,9 +366,9 @@ with gr.Blocks() as demo:
         outputs=[chatbot_ui, message_counter, user_goal]
     )
     clear.click(
-        lambda: ("BRICKSDATA_IPO", "Total messages sent: 0"),
+        lambda: ("BRICKSDATA_IPO", "Total messages sent: 0", [(None, chatbot.get_greeting())]),
         None,
-        [prompt_selector, message_counter]
+        [prompt_selector, message_counter, chatbot_ui]
     )
 
     winner_tip.click(lambda: winner_tip_message, None, msg)

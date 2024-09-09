@@ -49,7 +49,8 @@ def decode_image(encoded_string):
     return image
 
 def get_sample_videos():
-    return [f for f in os.listdir("data") if (f.endswith(".mp4") & ('downloaded_video.mp4' not in f))]
+    #return [f for f in os.listdir("data") if (f.endswith(".mp4") & ('downloaded_video.mp4' not in f))]
+    return [f for f in os.listdir("data") if (f.endswith(".mp4"))]
 
 def extract_video_frames(video):
     cap = cv2.VideoCapture(video)

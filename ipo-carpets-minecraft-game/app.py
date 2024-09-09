@@ -202,6 +202,12 @@ IMAGE_PROMPTS = {
     "PARENTS_PLAY_MINECRAFT": PARENTS_PLAY_MINECRAFT_IMAGE,
 }
 
+GREETINGS = {
+    "BRICKSDATA_IPO": "Welcome to BRICKSDATA! I'm the CEO. What can I do for you today?",
+    "TURKISH_CARPET_SALESMAN": "Hoşgeldiniz, my friend! Welcome to the finest carpet shop in all of Turkey. What beautiful carpet catches your eye today?",
+    "PARENTS_PLAY_MINECRAFT": "Mom: Hi sweetie, how was school today? Dad: Hey kiddo, finished your homework yet?",
+}
+
 
 class ChatBot:
     def __init__(self):
@@ -292,14 +298,7 @@ class ChatBot:
         return f"Total messages sent: {self.message_count}"
 
     def get_greeting(self):
-        if self.current_prompt == "BRICKSDATA_IPO":
-            return "Welcome to BRICKSDATA! I'm the CEO. What can I do for you today?"
-        elif self.current_prompt == "TURKISH_CARPET_SALESMAN":
-            return "Hoşgeldiniz, my friend! Welcome to the finest carpet shop in all of Turkey. What beautiful carpet catches your eye today?"
-        elif self.current_prompt == "PARENTS_PLAY_MINECRAFT":
-            return "Mom: Hi sweetie, how was school today? Dad: Hey kiddo, finished your homework yet?"
-        else:
-            return "Hello! How can I assist you today?"
+        return GREETINGS[self.current_prompt]
 
     def reset(self):
         self.history.clear()
@@ -335,7 +334,10 @@ def clear_fn():
 
 
 with gr.Blocks() as demo:
-    gr.Markdown("# Multi-Personality Chatbot using Databricks-hosted Model")
+    gr.Markdown("""
+    # Chatbot games using Databricks-hosted Model (Llama 3 and Shutterstock ImageAI powered by Foundation Models API)
+    Conccurent sessions may interfere, please click on the clear button to refresh the game.
+    """)
 
     prompt_selector = gr.Radio(
         choices=list(PROMPTS.keys()),

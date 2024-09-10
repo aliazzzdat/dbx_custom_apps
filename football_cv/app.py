@@ -1,5 +1,5 @@
 import gradio as gr
-import cv2
+import imageio
 import numpy as np
 import yt_dlp
 import os
@@ -53,14 +53,10 @@ def get_sample_videos():
     return [f for f in os.listdir("data") if (f.endswith(".mp4"))]
 
 def extract_video_frames(video):
-    cap = cv2.VideoCapture(video)
+    reader = imageio.get_reader(video, 'ffmpeg')
     frames = []
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    for frame in reader:
         frames.append(frame)
-    cap.release()
     return frames
 
 def extract_frames(video_input, image_input, sample_video_input, url_input):
@@ -70,20 +66,20 @@ def extract_frames(video_input, image_input, sample_video_input, url_input):
         if isinstance(image_input, np.ndarray):
             frames = [image_input]
         elif isinstance(image_input, str):
-            image = cv2.imread(image_input)
+            image = np.array(Image.open(image_input))
             frames = [image]
     elif sample_video_input is not None:
         frames = extract_video_frames(f"data/{sample_video_input}")
     elif url_input is not None:
         ydl_opts = {
             'outtmpl': "data/downloaded_video.mp4",
-            'format': 'best[ext=mp4][filesize<30M]',
+            'format': 'best[ext=mp4][filesize<10M]',
         }
         try:
             ydl = yt_dlp.YoutubeDL(ydl_opts)
             ydl.download([url_input])
         #except yt_dlp.utils.DownloadError:
-        #     print("Error: No suitable format found under 30MB")
+        #     print("Error: No suitable format found under 10MB")
         except Exception as e:
             print(e)
         frames = extract_video_frames("data/downloaded_video.mp4")
@@ -115,13 +111,13 @@ with gr.Blocks(title="Football Computer Vision") as demo:
     """
     # Football Computer Vision
 
-    Upload a video or an image, provide a YouTube URL, or select a sample video to extract frames. Then select a mode and click on "Add cv".
+    Upload a video or an image, provide a YouTube URL, or select a sample video to extract frames. Then select a mode and click on "Add CV". Videos size  couldn't exceed 10mb.
 
     Please note this app has been made for demonstration purposes only, the models have been deployed on a CPU endpoint which may delays the processing and limits the number of frames that can be processed (5 frames maximum). 
 
     Computer vision models should run on on-edge with the app using GPU device for real-time processing.
 
-    Please note PLAYER_TRACKING, TEAM_CLASSIFICATION and RADAR require a video input (at least 3 frames).
+    PLAYER_TRACKING, TEAM_CLASSIFICATION and RADAR require a video input (at least 3 frames).
 
     [Access the model in Unity Catalog](https://e2-demo-field-eng.cloud.databricks.com/explore/data/models/ali_azzouz/football/football_cv?o=1444828305810485)
     """)
@@ -140,7 +136,7 @@ with gr.Blocks(title="Football Computer Vision") as demo:
     with gr.Row():
         frame_selector = gr.Slider(minimum=0, maximum=0, step=1, label="Selected Frame")
         cv_type = gr.Dropdown(choices=MODES, label="CV Type", value="BALL_DETECTION")
-        add_cv_button = gr.Button("Add cv")
+        add_cv_button = gr.Button("Add CV")
     
     with gr.Row():
         output_cv_gallery = gr.Gallery(label="Output Frames With CV", preview=True, show_label=True, interactive=False)

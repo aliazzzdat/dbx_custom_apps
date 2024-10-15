@@ -222,7 +222,7 @@ class ChatBot:
         self.last_request = ""
 
     def respond(self, message):
-        print('respond')
+        
         if self.game_over:
             self.reset()
             return "The previous game is over. A new game has started. \n " + self.get_greeting()
@@ -264,7 +264,6 @@ class ChatBot:
     def generate_image(self):
 
         try:
-            print("generate image prompt")
             chat_completion = client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": IMAGE_PROMPTS[self.current_prompt]},
@@ -273,13 +272,11 @@ class ChatBot:
                 model=RESPONSE_MODEL_NAME,
                 max_tokens=256,
             )
-            print("print generate image")
             prompt_image = chat_completion.choices[0].message.content
             image = client.images.generate(
                 prompt=prompt_image,
                 model=IMAGE_MODEL_NAME
             )
-            print("decode image")
             encoded_image = image.data[0].b64_json
             
             return (None, f'<img src="data:image/png;base64,{encoded_image}">')

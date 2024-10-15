@@ -6,3 +6,7 @@ env:
     value: your_token
   - name: MODEL_ENDPOINT_HOST
     value: https://e2-demo-field-eng.cloud.databricks.com/serving-endpoints
+  - name: RESPONSE_MODEL_NAME
+    value: databricks-meta-llama-3-1-405b-instruct
+  - name: IMAGE_MODEL_NAME
+    value: databricks-shutterstock-imageai

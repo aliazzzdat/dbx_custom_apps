@@ -303,7 +303,7 @@ class ChatBot:
             )
             return chat_completion.choices[0].message.content
         except Exception as e:
-            return (f"An error occurred: {str(e)}")
+            return f"An error occurred: {str(e)}"
 
         
     def set_prompt(self, new_prompt):

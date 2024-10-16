@@ -280,7 +280,7 @@ class ChatBot:
             )
             encoded_image = image.data[0].b64_json
             
-            return (None, f'<img src="data:image/png;base64,{encoded_image}">')
+            return (None, f'<img alt="{prompt_image}" src="data:image/png;base64,{encoded_image}">')
         except Exception as e:
             return (None, f"An error occurred: {str(e)}")
         
@@ -334,6 +334,7 @@ class ChatBot:
 
 
 def chat(message, chat_history, context_img_gen):
+    global chatbot
     bot_message = chatbot.respond(message)
     chat_history.append((message, bot_message))
     if (not chatbot.game_over) & (context_img_gen == 'Enabled'):
@@ -343,11 +344,13 @@ def chat(message, chat_history, context_img_gen):
 
 
 def change_prompt(new_prompt):
+    global chatbot
     chatbot.change_prompt(new_prompt)
     greeting = chatbot.get_greeting()
     return [(None, greeting)], chatbot.get_message_count(), GOALS[new_prompt]
 
 def clear_fn():
+    global chatbot
     chatbot.reset()
     chatbot.set_prompt("BRICKSDATA_IPO")
     return "BRICKSDATA_IPO", "Total messages sent: 0", [(None, chatbot.get_greeting())], "Disabled"

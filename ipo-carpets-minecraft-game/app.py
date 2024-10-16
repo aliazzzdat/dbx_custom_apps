@@ -280,7 +280,7 @@ class ChatBot:
             )
             encoded_image = image.data[0].b64_json
             
-            return (None, f'<img alt="{prompt_image}" src="data:image/png;base64,{encoded_image}">')
+            return (None, f'<img alt={prompt_image} src="data:image/png;base64,{encoded_image}">')
         except Exception as e:
             return (None, f"An error occurred: {str(e)}")
         

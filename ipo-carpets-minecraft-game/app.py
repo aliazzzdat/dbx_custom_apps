@@ -329,7 +329,7 @@ class ChatBot:
         #self.current_prompt = "BRICKSDATA_IPO"
 
 
-chatbot = ChatBot()
+
 
 
 def chat(message, chat_history, context_img_gen):
@@ -353,6 +353,9 @@ def clear_fn():
 
 
 with gr.Blocks() as demo:
+
+    chatbot = ChatBot()
+    
     gr.Markdown("""
     # Chatbot games using Databricks-hosted Model (Llama 3 and Shutterstock ImageAI powered by Foundation Models API)
     Context image generation may slow down the discussion.

@@ -1,3 +1,4 @@
-gradio
+gradio==5.44.1
 yt_dlp
 imageio[ffmpeg]
+fastapi==0.116.1
